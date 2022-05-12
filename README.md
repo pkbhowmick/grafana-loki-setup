@@ -2,98 +2,56 @@
 
 Grafana Loki Setup Guide in Kubernetes
 
-## Single Tenent Model (Using DaemonSet)
+## Single Tenent Model (Using DaemonSet for Log Collector Client(Fluent bit))
 
-1. Install Grafana loki-stack in loki namespace. It will install loki(StatefulSet) and promtail(DaemonSet) by default.
+1. Install Grafana loki-distributed chart in loki namespace. It will install loki's mircoservice components.
 
 ```bash
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
-helm upgrade --install loki-stack grafana/loki-stack -n loki --create-namespace
+helm upgrade --install loki grafana/loki-distributed -n loki --create-namespace --values=sample-values.yaml
 ```
 
-2. Check default values file for grafana/loki-stack. By default only loki and promtail is enabled.
+2. Install Fluent bit for collecting log with proper loki service name.
 
 ```bash
-helm show values grafana/loki-stack
+helm upgrade --install fluent-bit grafana/fluent-bit -n loki \
+                      --set loki.serviceName=loki-loki-distributed-distributor.loki.svc
 ```
 
-Values file:
+3. Port forward grafana service & add loki data source. After that from `Explore` section in grafana UI, logs can be examined.
 
+Sample:
+
+![sample-log](./static/grafana-logs.png)
+
+
+4. For getting alert configure alert_manager url in `.values.loki.config` section & add necessary rules in `.values.ruler.directories` sections.
+
+Sample rules file:
 ```yaml
-loki:
-  enabled: true
-  isDefault: true
-
-promtail:
-  enabled: true
-  config:
-    lokiAddress: http://{{ .Release.Name }}:3100/loki/api/v1/push
-
-fluent-bit:
-  enabled: false
-
-grafana:
-  enabled: false
-  sidecar:
-    datasources:
-      enabled: true
-      maxLines: 1000
-  image:
-    tag: 8.3.5
-
-prometheus:
-  enabled: false
-  isDefault: false
-
-filebeat:
-  enabled: false
-  filebeatConfig:
-    filebeat.yml: |
-      # logging.level: debug
-      filebeat.inputs:
-      - type: container
-        paths:
-          - /var/log/containers/*.log
-        processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-            - logs_path:
-                logs_path: "/var/log/containers/"
-      output.logstash:
-        hosts: ["logstash-loki:5044"]
-
-logstash:
-  enabled: false
-  image: grafana/logstash-output-loki
-  imageTag: 1.0.1
-  filters:
-    main: |-
-      filter {
-        if [kubernetes] {
-          mutate {
-            add_field => {
-              "container_name" => "%{[kubernetes][container][name]}"
-              "namespace" => "%{[kubernetes][namespace]}"
-              "pod" => "%{[kubernetes][pod][name]}"
-            }
-            replace => { "host" => "%{[kubernetes][node][name]}"}
-          }
-        }
-        mutate {
-          remove_field => ["tags"]
-        }
-      }
-  outputs:
-    main: |-
-      output {
-        loki {
-          url => "http://loki:3100/loki/api/v1/push"
-          #username => "test"
-          #password => "test"
-        }
-        # stdout { codec => rubydebug }
-      }
+rules.yaml:
+  groups:
+  - name: should_fire
+    rules:
+      - alert: KubeDBOperatorHighFailedError
+        expr: sum by (container) (rate({namespace="kubedb"} |= "Failed"[1m])) > 0.0001
+        for: 1m
+        labels:
+            severity: warning
+        annotations:
+            summary: High failed error
+  - name: test-rule
+    rules: 
+      - alert: loki-test-rule
+        annotations: 
+          message: "testing loki rules"
+        expr: 1+1
+        for: 1m
+        labels: 
+          severity: critical
 ```
 
+Alert in AlertManager UI:
+
+![alert-manager-sample-ui](./static/alert-manager-sample.png)

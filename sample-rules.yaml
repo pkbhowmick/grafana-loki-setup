@@ -1,0 +1,20 @@
+rules.yaml:
+  groups:
+  - name: should_fire
+    rules:
+      - alert: KubeDBOperatorHighFailedError
+        expr: sum by (container) (rate({namespace="kubedb"} |= "Failed"[1m])) > 0.0001
+        for: 1m
+        labels:
+            severity: warning
+        annotations:
+            summary: High failed error
+  - name: test-rule
+    rules: 
+      - alert: loki-test-rule
+        annotations: 
+          message: "testing loki rules"
+        expr: 1+1
+        for: 1m
+        labels: 
+          severity: critical
