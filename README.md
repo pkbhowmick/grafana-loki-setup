@@ -55,3 +55,7 @@ rules.yaml:
 Alert in AlertManager UI:
 
 ![alert-manager-sample-ui](./static/alert-manager-sample.png)
+
+## Multi Tenent Model (Promtail log collector as a Sidecar)
+
+

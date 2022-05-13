@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promtail-deployment
+  namespace: loki
+spec:
+  selector:
+    matchLabels:
+      name: promtail
+  template:
+    metadata:
+      labels:
+        name: promtail
+    spec:
+      serviceAccount: promtail
+      serviceAccountName: promtail
+      volumes:
+      - name: logs
+        hostPath:
+          path: /etc/promlog
+      - name: promtail-config
+        configMap:
+          name: promtail-configmap
+      - name: run
+        hostPath:
+          path: /run/promtail
+      containers:
+      - name: promtail-container
+        image: grafana/promtail
+        args:
+        - -config.file=/etc/promtail/promtail.yaml
+        volumeMounts:
+        - name: logs
+          mountPath: /etc/promlog
+        - name: promtail-config
+          mountPath: /etc/promtail
+        - name: run
+          mountPath: /run/promtail
