@@ -1068,7 +1068,7 @@ ruler:
 # Configuration for the index-gateway
 indexGateway:
   # -- Specifies whether the index-gateway should be enabled
-  enabled: false
+  enabled: true
   # -- Number of replicas for the index-gateway
   replicas: 1
   image:
@@ -1089,14 +1089,20 @@ indexGateway:
   # -- Additional CLI args for the index-gateway
   extraArgs: []
   # -- Environment variables to add to the index-gateway pods
-  extraEnv: []
-  # -- Environment variables from secrets or configmaps to add to the index-gateway pods
+  extraEnv:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /var/secrets/google/GOOGLE_SERVICE_ACCOUNT_JSON_KEY
+  # -- Environment variables from secrets or configmaps to add to the ingester pods
   extraEnvFrom: []
-  # -- Volume mounts to add to the index-gateway pods
-  extraVolumeMounts: []
-  # -- Volumes to add to the index-gateway pods
-  extraVolumes: []
-  # -- Resource requests and limits for the index-gateway
+  # -- Volume mounts to add to the ingester pods
+  extraVolumeMounts:
+    - name: google-cloud-key
+      mountPath: /var/secrets/google
+  # -- Volumes to add to the ingester pods
+  extraVolumes:
+    - name: google-cloud-key
+      secret:
+        secretName: gcs-secret
   resources: {}
   # -- Containers to add to the index-gateway pods
   extraContainers: []
@@ -1124,7 +1130,7 @@ indexGateway:
   tolerations: []
   persistence:
     # -- Enable creating PVCs which is required when using boltdb-shipper
-    enabled: false
+    enabled: true
     # -- Size of persistent disk
     size: 10Gi
     # -- Storage class to be used.
@@ -1132,7 +1138,7 @@ indexGateway:
     # If set to "-", storageClassName: "", which disables dynamic provisioning.
     # If empty or set to null, no storageClassName spec is
     # set, choosing the default provisioner (gp2 on AWS, standard on GKE, AWS, and OpenStack).
-    storageClass: null
+    storageClass: standard
 
 memcached:
   image:
