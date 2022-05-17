@@ -130,14 +130,27 @@ ingester:
     storageClass: standard
 ```
 
-A full working values file `loki-sample-values-file.yaml` is given for example.
+A full working values file `loki-sample-values-gcp.yaml` is given for example.
 If everything goes well, then data will be stored in gcp bucket like this:
 
 ![gcp-sample](./static/gcp-sample.png)
 
 Note: Here GCS bucket will hold the index data as well as compressed log data. BoltDB shipper will upload the new files in every 15 min interval. So, to avoid data loss in case pod crash, ingester should be run with persistence data storage. (Ref: https://grafana.com/docs/loki/latest/operations/storage/boltdb-shipper/)
 
-### References
+
+### Data Retention Policy
+
+In loki, `Table Manager` manages data deletion and retention policy.
+
+- gcs: The object storages - like Amazon S3 and Google Cloud Storage - supported by Loki to store chunks, are not managed by the Table Manager, and a custom bucket policy should be set to delete old data. (Ref: https://grafana.com/docs/loki/latest/operations/storage/table-manager/#table-manager)
+
+To setup custom storage policy in gcs, Lifecycle can be used to delete older data more than a specified days. (Ref: https://cloud.google.com/storage/docs/lifecycle)
+
+Example:
+
+![gcs-lifecycle](./static/gcs-delete-policy.png)
+
+## References
 
 - https://grafana.com/docs/loki/latest/
 - https://github.com/grafana/loki
