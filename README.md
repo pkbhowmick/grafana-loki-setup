@@ -2,7 +2,7 @@
 
 Grafana Loki Setup Guide in Kubernetes
 
-## Single Tenent Model (Using DaemonSet for Log Collector Client(Fluent bit))
+## Single Tenent Model (Using DaemonSet for Log Collector Client(Fluent bit Or Promtail))
 
 1. Install Grafana loki-distributed chart in loki namespace. It will install loki's mircoservice components.
 
@@ -17,6 +17,12 @@ helm upgrade --install loki grafana/loki-distributed -n loki --create-namespace 
 ```bash
 helm upgrade --install fluent-bit grafana/fluent-bit -n loki \
                       --set loki.serviceName=loki-loki-distributed-distributor.loki.svc
+```
+
+For installing promtail:
+
+```bash
+helm upgrade -i promtail grafana/promtail -n loki --set config.lokiAddress=http://loki-loki-distributed-distributor.loki.svc:3100/loki/api/v1/push
 ```
 
 3. Port forward grafana service & add loki data source. After that from `Explore` section in grafana UI, logs can be examined.
@@ -149,6 +155,39 @@ To setup custom storage policy in gcs, Lifecycle can be used to delete older dat
 Example:
 
 ![gcs-lifecycle](./static/gcs-delete-policy.png)
+
+
+## Setup Loki with Linode Object Storage(AWS S3 compatible) as an object storage
+
+Configure Loki's values file for Linode Object Storage. A full working example is given in `sample-values-loki-linode.yaml`.
+
+Sample `.values.loki.schemaConfig`:
+
+```yaml
+  schemaConfig:
+    configs:
+    - from: 2020-09-07
+      store: boltdb-shipper
+      object_store: s3
+      schema: v11
+      index:
+        prefix: loki_index_
+        period: 24h
+```
+
+Sample `.values.loki.storageConfig`:
+
+```yaml
+  storageConfig:
+    boltdb_shipper:
+      shared_store: s3
+      active_index_directory: /var/loki/index
+      cache_location: /var/loki/cache
+      cache_ttl: 168h
+    aws:
+      s3: s3://access_key:secret_key@endpoint/bucket_name
+      s3forcepathstyle: true
+```
 
 ## References
 
