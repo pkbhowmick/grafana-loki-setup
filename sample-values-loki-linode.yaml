@@ -179,7 +179,7 @@ loki:
 #   azure: {}
 #   gcs: {}
     aws:
-      s3: s3://access_key:secret_key@endpoint/bucket_name
+      s3: s3://access_key:secret_key@endpoint/bucket
       s3forcepathstyle: true
 #   boltdb: {}
 
@@ -991,22 +991,48 @@ ruler:
         groups:
         - name: should_fire
           rules:
-            - alert: KubeDBOperatorHighFailedError
-              expr: sum by (container) (rate({namespace="kubedb"} |= "Failed"[1m])) > 0.0001
+            - alert: AlertManagerHealthCheck
+              expr: 1 + 1
+              for: 1m
+              labels:
+                  severity: none
+              annotations:
+                  summary: Not an alert! Just for checking AlertManager Pipeline
+                  
+            - alert: KubeDBHighPercentageError
+              expr: |
+                sum(rate({namespace="kubedb"} |= "error" [5m])) by (pod)
+                / 
+                sum(rate({namespace="kubedb"} [5m])) by (pod)
+                > 0.05
               for: 1m
               labels:
                   severity: warning
+                  job: kubedb
               annotations:
-                  summary: High failed error
-        - name: test-rule
-          rules: 
-            - alert: loki-test-rule
-              annotations: 
-                message: "testing loki rules"
-              expr: 1+1
+                  summary: High Percentage error in KubeDB pods in KubeDB namespace
+
+            - alert: KubeDBHighPercentageFailedLog
+              expr: |
+                sum(rate({namespace="kubedb"} |= "failed" [5m])) by (pod)
+                /
+                sum(rate({namespace="kubedb"} [5m])) by (pod)
+                > 0.05
               for: 1m
-              labels: 
+              labels:
+                job: kubedb
+                severity: warning
+              annotations:
+                summary: High Percentage Failed log in KubeDB pods in KubeDB namespace
+            
+            - alert: HighConnectionRefused
+              expr: sum by (pod) (count_over_time({namespace="kubedb"} |= "connection refused" [5m]) > 10)
+              for: 5m
+              labels:
+                job: kubedb
                 severity: critical
+              annotations:
+                summary: High number of connections are refused in pods in KubeDB namespace
     #   rules2.txt: |
     #     groups:
     #       - name: example

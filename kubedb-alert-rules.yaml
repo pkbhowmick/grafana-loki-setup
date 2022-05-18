@@ -1,0 +1,54 @@
+rules.yaml:
+  groups:
+  - name: should_fire
+    rules:
+      - alert: AlertManagerHealthCheck
+        expr: 1 + 1
+        for: 1m
+        labels:
+            severity: info
+        annotations:
+            summary: Not an alert! Just for checking AlertManager Pipeline
+
+      - alert: KubeDBHighPercentageError
+        expr: |
+          sum(rate({namespace="kubedb"} |= "error" [5m])) by (pod)
+           / 
+          sum(rate({namespace="kubedb"} [5m])) by (pod)
+           > 0.05
+        for: 1m
+        labels:
+            severity: warning
+        annotations:
+            summary: High Percentage error in KubeDB pods in KubeDB namespace
+
+      - alert: KubeDBHighPercentageFailedLog
+        expr: |
+          sum(rate({namespace="kubedb"} |= "failed" [5m])) by (pod)
+           /
+          sum(rate({namespace="kubedb"} [5m])) by (pod)
+           > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: High Percentage Failed log in KubeDB pods in KubeDB namespace
+      
+      - alert: HighConnectionRefused
+        expr: sum by (pod) (count_over_time({namespace="kubedb"} |= "connection refused")) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High number of connections are refused in pods in KubeDB namespace
+      
+      - alert: HighConnectionRefused
+        expr: sum by (pod) (count_over_time({namespace="kubedb"} |= "connection refused")) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High number of connections are refused in pods in KubeDB namespace
+
+      
+      
